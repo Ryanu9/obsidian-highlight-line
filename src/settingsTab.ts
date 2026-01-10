@@ -27,6 +27,17 @@ export class CodeHighlightSettingTab extends PluginSettingTab {
 					this.plugin.refreshViews();
 				}));
 
+		new Setting(containerEl)
+			.setName('Show prefix in Reading Mode')
+			.setDesc('Show the ">>>> " prefix in Reading Mode. When disabled, the prefix is hidden but the line is still highlighted.')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.showPrefixInReadingMode)
+				.onChange(async (value) => {
+					this.plugin.settings.showPrefixInReadingMode = value;
+					await this.plugin.saveSettings();
+					this.plugin.refreshViews();
+				}));
+
 		// 背景颜色设置
 		new Setting(containerEl)
 			.setName('Background color')
@@ -56,10 +67,10 @@ export class CodeHighlightSettingTab extends PluginSettingTab {
 		// 预览区域
 		const previewContainer = containerEl.createDiv('highlight-preview-container');
 		previewContainer.createEl('h3', { text: 'Preview' });
-		
+
 		const previewBox = previewContainer.createDiv('highlight-preview-box');
 		previewBox.createEl('code', { text: 'This is a highlighted line' });
-		
+
 		this.updatePreview(previewBox);
 	}
 
@@ -71,12 +82,12 @@ export class CodeHighlightSettingTab extends PluginSettingTab {
 	hexToRgba(hex: string, opacity: number): string {
 		// 移除 # 号
 		hex = hex.replace('#', '');
-		
+
 		// 将 hex 转换为 RGB
 		const r = parseInt(hex.substring(0, 2), 16);
 		const g = parseInt(hex.substring(2, 4), 16);
 		const b = parseInt(hex.substring(4, 6), 16);
-		
+
 		return `rgba(${r}, ${g}, ${b}, ${opacity})`;
 	}
 }

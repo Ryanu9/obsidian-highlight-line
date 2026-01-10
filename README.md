@@ -8,7 +8,7 @@ An Obsidian plugin that highlights specific lines in code blocks using a simple 
 ## Features
 - **Editor Mode Support**: Real-time highlighting in Live Preview.
 - **Reading Mode Support**: Highlight remains visible in Reading View and exported documents.
-- **Automatic Prefix Hiding**: The `>>>> ` prefix is automatically hidden, keeping your code clean.
+- **Automatic Prefix Hiding**: The `>>>> ` prefix is naturally hidden. In Reading Mode, you can choose whether to display it via settings.
 - **Customizable Appearance**: Configure the highlight background color and opacity in settings.
 ![alt text](image-1.png)
 ![alt text](image.png)

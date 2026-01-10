@@ -1,0 +1,41 @@
+/* Code Highlight Plugin Styles */
+
+/* 阅读视图中的高亮行 */
+.code-highlight-line {
+	display: block;
+	padding: 0 4px;
+	margin: 0 -4px;
+}
+
+/* 编辑视图中的高亮行 */
+.cm-code-highlight-line {
+	display: block;
+}
+
+/* 设置面板预览区域 */
+.highlight-preview-container {
+	margin-top: 20px;
+	padding: 15px;
+	background-color: var(--background-secondary);
+	border-radius: 5px;
+}
+
+.highlight-preview-container h3 {
+	margin-top: 0;
+	margin-bottom: 10px;
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.highlight-preview-box {
+	padding: 10px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 3px;
+	background-color: var(--background-primary);
+	font-family: var(--font-monospace);
+}
+
+.highlight-preview-box code {
+	padding: 2px 4px;
+	border-radius: 3px;
+}

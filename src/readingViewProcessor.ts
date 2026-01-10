@@ -27,8 +27,11 @@ export function registerReadingViewProcessor(plugin: CodeHighlightPlugin) {
 				// Stay consistent with editorExtension.ts: look for exactly ">>>> " at start
 				if (plainText.startsWith('>>>> ')) {
 					hasHighlight = true;
-					// Remove the ">>>> " prefix. Match either raw or HTML entity version.
-					let newLine = line.replace(/(&gt;|>){4}\s?/, "");
+					// Remove the ">>>> " prefix if setting is disabled. Match either raw or HTML entity version.
+					let newLine = line;
+					if (!plugin.settings.showPrefixInReadingMode) {
+						newLine = line.replace(/(&gt;|>){4}\s?/, "");
+					}
 					return `<span class="code-highlight-line">${newLine}</span>`;
 				}
 				return line;

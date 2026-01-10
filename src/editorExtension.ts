@@ -29,7 +29,7 @@ export function createEditorExtension(plugin: CodeHighlightPlugin) {
 				const docChanged = update.docChanged;
 				const cursorPos = update.state.selection.main.head;
 				const cursorMoved = cursorPos !== this.lastCursorPos;
-				
+
 				// 检查是否需要更新缓存的颜色
 				const currentColor = this.getRgbaColor(plugin);
 				if (currentColor !== this.cachedRgbaColor) {
@@ -48,12 +48,12 @@ export function createEditorExtension(plugin: CodeHighlightPlugin) {
 				if (cursorMoved) {
 					const oldCursorInBlock = this.findCodeBlockContaining(this.lastCursorPos);
 					const newCursorInBlock = this.findCodeBlockContaining(cursorPos);
-					
+
 					// 只有当光标进入或离开代码块时才更新
 					if (oldCursorInBlock !== newCursorInBlock) {
 						this.decorations = this.buildDecorations(update.view);
 					}
-					
+
 					this.lastCursorPos = cursorPos;
 				}
 
@@ -69,34 +69,34 @@ export function createEditorExtension(plugin: CodeHighlightPlugin) {
 			updateCodeBlocksCache(state: EditorState) {
 				this.codeBlocksCache = [];
 				this.lastDocLength = state.doc.length;
-				
+
 				const doc = state.doc;
 				let i = 1;
-				
+
 				while (i <= doc.lines) {
 					const line = doc.line(i);
 					const text = line.text.trim();
-					
+
 					// 找到代码块开始
 					if (text.startsWith('```')) {
 						const startLine = i;
 						const startPos = line.from;
-						
+
 						// 查找代码块结束
 						let endLine = -1;
 						let endPos = -1;
-						
+
 						for (let j = i + 1; j <= doc.lines; j++) {
 							const endLineCand = doc.line(j);
 							const endText = endLineCand.text.trim();
-							
+
 							if (endText === '```') {
 								endLine = j;
 								endPos = endLineCand.to;
 								break;
 							}
 						}
-						
+
 						if (endLine !== -1) {
 							this.codeBlocksCache.push({
 								from: startPos,
@@ -108,7 +108,7 @@ export function createEditorExtension(plugin: CodeHighlightPlugin) {
 							continue;
 						}
 					}
-					
+
 					i++;
 				}
 			}
@@ -137,13 +137,13 @@ export function createEditorExtension(plugin: CodeHighlightPlugin) {
 
 				// 只处理可见区域内的代码块（性能优化）
 				const viewport = view.viewport;
-				
+
 				for (const block of this.codeBlocksCache) {
 					// 跳过不在视口内的代码块
 					if (block.to < viewport.from || block.from > viewport.to) {
 						continue;
 					}
-					
+
 					// 如果光标在当前代码块内，跳过高亮
 					if (cursorBlock && cursorBlock.from === block.from) {
 						continue;
@@ -152,14 +152,14 @@ export function createEditorExtension(plugin: CodeHighlightPlugin) {
 					// 遍历代码块内的行
 					for (let lineNum = block.startLine + 1; lineNum < block.endLine; lineNum++) {
 						const line = state.doc.line(lineNum);
-						
+
 						// 跳过不在视口内的行
 						if (line.to < viewport.from || line.from > viewport.to) {
 							continue;
 						}
-						
+
 						const text = line.text;
-						
+
 						if (text.startsWith('>>>> ')) {
 							// 添加行高亮装饰
 							const lineDeco = Decoration.line({
@@ -169,7 +169,7 @@ export function createEditorExtension(plugin: CodeHighlightPlugin) {
 								}
 							});
 							builder.add(line.from, line.from, lineDeco);
-							
+
 							// 隐藏 ">>>> " 前缀（5个字符）
 							const hideDeco = Decoration.replace({});
 							builder.add(line.from, line.from + 5, hideDeco);
