@@ -1,8 +1,10 @@
 import { Plugin } from 'obsidian';
-import { CodeHighlightSettings, DEFAULT_SETTINGS } from './settings';
+import { CodeHighlightSettings, DEFAULT_SETTINGS, HIGHLIGHT_PREFIXES } from './settings';
 import { CodeHighlightSettingTab } from './settingsTab';
 import { registerReadingViewProcessor } from './readingViewProcessor';
 import { createEditorExtension } from './editorExtension';
+import { registerToggleHighlightCommand } from './toggleHighlightCommand';
+import { registerPromptHighlightProcessor } from './promptHighlight';
 
 export default class CodeHighlightPlugin extends Plugin {
 	settings: CodeHighlightSettings;
@@ -14,12 +16,18 @@ export default class CodeHighlightPlugin extends Plugin {
 		// 注册阅读视图处理器
 		registerReadingViewProcessor(this);
 
+		// 注册命令提示符高亮处理器 (仅阅读模式)
+		registerPromptHighlightProcessor(this);
+
 		// 注册编辑视图扩展
 		this.editorExtension = createEditorExtension(this);
 		this.registerEditorExtension(this.editorExtension);
 
 		// 添加设置面板
 		this.addSettingTab(new CodeHighlightSettingTab(this.app, this));
+
+		// 注册快捷键命令 (默认无快捷键，需用户手动配置)
+		registerToggleHighlightCommand(this);
 
 		// 添加初始样式
 		this.updateStyles();
@@ -41,23 +49,47 @@ export default class CodeHighlightPlugin extends Plugin {
 	updateStyles() {
 		this.removeStyles();
 
-		const { backgroundColor, opacity } = this.settings;
-		const rgba = this.hexToRgba(backgroundColor, opacity);
+		const { backgroundColor, opacity, diffAddColor, diffAddOpacity, diffRemoveColor, diffRemoveOpacity } = this.settings;
+		const rgbaHighlight = this.hexToRgba(backgroundColor, opacity);
+		const rgbaDiffAdd = this.hexToRgba(diffAddColor, diffAddOpacity);
+		const rgbaDiffRemove = this.hexToRgba(diffRemoveColor, diffRemoveOpacity);
 
 		const style = document.createElement('style');
 		style.id = 'code-highlight-plugin-styles';
 		style.textContent = `
+			/* >>>> highlight */
 			.code-highlight-line {
 				display: block;
-				background-color: ${rgba} !important;
+				background-color: ${rgbaHighlight} !important;
 				padding: 0 4px;
 				margin: 0 -4px;
 			}
-			
 			.cm-code-highlight-line {
-				background-color: ${rgba} !important;
+				background-color: ${rgbaHighlight} !important;
 			}
-			
+
+			/* >>>+ diff add */
+			.code-highlight-diff-add {
+				display: block;
+				background-color: ${rgbaDiffAdd} !important;
+				padding: 0 4px;
+				margin: 0 -4px;
+			}
+			.cm-code-highlight-diff-add {
+				background-color: ${rgbaDiffAdd} !important;
+			}
+
+			/* >>>- diff remove */
+			.code-highlight-diff-remove {
+				display: block;
+				background-color: ${rgbaDiffRemove} !important;
+				padding: 0 4px;
+				margin: 0 -4px;
+			}
+			.cm-code-highlight-diff-remove {
+				background-color: ${rgbaDiffRemove} !important;
+			}
+
 			.highlight-preview-container {
 				margin-top: 20px;
 				padding: 15px;
@@ -74,7 +106,6 @@ export default class CodeHighlightPlugin extends Plugin {
 			}
 			
 			.highlight-preview-box code {
-				background-color: ${rgba};
 				padding: 2px 4px;
 				border-radius: 3px;
 			}

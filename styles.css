@@ -5,10 +5,37 @@
 	display: block;
 	padding: 0 4px;
 	margin: 0 -4px;
+	line-height: inherit;
+}
+
+/* 阅读视图中的 diff add 行 */
+.code-highlight-diff-add {
+	display: block;
+	padding: 0 4px;
+	margin: 0 -4px;
+	line-height: inherit;
+}
+
+/* 阅读视图中的 diff remove 行 */
+.code-highlight-diff-remove {
+	display: block;
+	padding: 0 4px;
+	margin: 0 -4px;
+	line-height: inherit;
 }
 
 /* 编辑视图中的高亮行 */
 .cm-code-highlight-line {
+	display: block;
+}
+
+/* 编辑视图中的 diff add 行 */
+.cm-code-highlight-diff-add {
+	display: block;
+}
+
+/* 编辑视图中的 diff remove 行 */
+.cm-code-highlight-diff-remove {
 	display: block;
 }
 
@@ -38,4 +65,70 @@
 .highlight-preview-box code {
 	padding: 2px 4px;
 	border-radius: 3px;
+}
+
+/* Style Settings 风格颜色选择器 */
+.ch-color-control {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: nowrap;
+}
+
+.ch-swatch-wrapper {
+	flex-shrink: 0;
+}
+
+.ch-color-swatch {
+	width: 32px;
+	height: 32px;
+	padding: 2px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	cursor: pointer;
+	background: none;
+}
+
+.ch-color-swatch::-webkit-color-swatch-wrapper {
+	padding: 0;
+}
+
+.ch-color-swatch::-webkit-color-swatch {
+	border: none;
+	border-radius: 2px;
+}
+
+.ch-hex-input {
+	width: 80px;
+	padding: 4px 8px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	background-color: var(--background-primary);
+	color: var(--text-normal);
+	font-family: var(--font-monospace);
+	font-size: 13px;
+}
+
+.ch-hex-input:focus {
+	border-color: var(--interactive-accent);
+	outline: none;
+}
+
+.ch-opacity-wrapper {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex-shrink: 0;
+}
+
+.ch-opacity-slider {
+	width: 80px;
+	cursor: pointer;
+}
+
+.ch-opacity-label {
+	font-size: 12px;
+	color: var(--text-muted);
+	min-width: 32px;
+	text-align: right;
 }

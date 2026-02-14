@@ -1,48 +1,97 @@
 import { MarkdownPostProcessorContext } from 'obsidian';
 import type CodeHighlightPlugin from './main';
+import { HIGHLIGHT_PREFIXES } from './settings';
+
+// 前缀到 CSS 类名的映射
+const PREFIX_CLASS_MAP: { prefix: string; cssClass: string }[] = [
+	{ prefix: HIGHLIGHT_PREFIXES.HIGHLIGHT, cssClass: 'code-highlight-line' },
+	{ prefix: HIGHLIGHT_PREFIXES.DIFF_ADD, cssClass: 'code-highlight-diff-add' },
+	{ prefix: HIGHLIGHT_PREFIXES.DIFF_REMOVE, cssClass: 'code-highlight-diff-remove' },
+];
+
+/**
+ * Strip N characters from the beginning of an HTML fragment using DOM traversal.
+ * This correctly handles text split across multiple <span> tags by syntax highlighting.
+ */
+function stripHtmlPrefix(html: string, prefixLength: number): string {
+	const container = document.createElement('span');
+	container.innerHTML = html;
+
+	let charsToRemove = prefixLength;
+	const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+
+	while (walker.nextNode() && charsToRemove > 0) {
+		const node = walker.currentNode as Text;
+		const len = node.textContent!.length;
+		if (len <= charsToRemove) {
+			charsToRemove -= len;
+			node.textContent = '';
+		} else {
+			node.textContent = node.textContent!.substring(charsToRemove);
+			charsToRemove = 0;
+		}
+	}
+
+	// Clean up empty elements left behind
+	container.querySelectorAll('span:empty').forEach(el => el.remove());
+
+	return container.innerHTML;
+}
 
 export function registerReadingViewProcessor(plugin: CodeHighlightPlugin) {
 	plugin.registerMarkdownPostProcessor((element: HTMLElement, context: MarkdownPostProcessorContext) => {
 		if (!plugin.settings.enabled) return;
 
 		const codeBlocks = element.querySelectorAll('pre > code');
-		codeBlocks.forEach((codeEl: HTMLElement) => {
-			// Find text content to check if it needs highlighting
-			const text = codeEl.textContent || "";
-			if (!text.includes('>>>> ')) return;
+		codeBlocks.forEach((codeEl: Element) => {
+			const htmlCodeEl = codeEl as HTMLElement;
 
-			// If already processed, skip to avoid double processing
-			if (codeEl.dataset.lineHighlighted === 'true') return;
+			// Use setTimeout to ensure we run after Obsidian's syntax highlighting
+			setTimeout(() => {
+				const text = htmlCodeEl.textContent || "";
+				// Check if any prefix is present
+				const hasAnyPrefix = PREFIX_CLASS_MAP.some(p => text.includes(p.prefix));
+				if (!hasAnyPrefix) return;
 
-			const html = codeEl.innerHTML;
-			const lines = html.split('\n');
-			let hasHighlight = false;
+				const html = htmlCodeEl.innerHTML;
+				const lines = html.split('\n');
+				let hasHighlight = false;
 
-			const newLines = lines.map(line => {
-				// Use a temporary div to get the plain text version of this HTML-encoded line
-				const tempDiv = document.createElement('div');
-				tempDiv.innerHTML = line;
-				const plainText = tempDiv.textContent || "";
+				const highlightedIndices = new Set<number>();
+				const newLines = lines.map((line, index) => {
+					const tempDiv = document.createElement('div');
+					tempDiv.innerHTML = line;
+					const plainText = tempDiv.textContent || "";
 
-				// Stay consistent with editorExtension.ts: look for exactly ">>>> " at start
-				if (plainText.startsWith('>>>> ')) {
-					hasHighlight = true;
-					// Remove the ">>>> " prefix if setting is disabled. Match either raw or HTML entity version.
-					let newLine = line;
-					if (!plugin.settings.showPrefixInReadingMode) {
-						newLine = line.replace(/(&gt;|>){4}\s?/, "");
+					for (const entry of PREFIX_CLASS_MAP) {
+						if (plainText.startsWith(entry.prefix)) {
+							hasHighlight = true;
+							highlightedIndices.add(index);
+							let newLine = line;
+							if (!plugin.settings.showPrefixInReadingMode) {
+								newLine = stripHtmlPrefix(line, entry.prefix.length);
+							}
+							return `<span class="${entry.cssClass}">${newLine}</span>`;
+						}
 					}
-					return `<span class="code-highlight-line">${newLine}</span>`;
-				}
-				return line;
-			});
+					return line;
+				});
 
-			if (hasHighlight) {
-				codeEl.innerHTML = newLines.join('\n');
-				codeEl.dataset.lineHighlighted = 'true';
-				// Add a class to the parent pre for further styling if needed
-				codeEl.parentElement?.classList.add('has-line-highlight');
-			}
+				if (hasHighlight) {
+					// Join lines, but omit \n after display:block highlight spans
+					// to avoid extra blank lines in <pre> context
+					let joined = newLines[0];
+					for (let i = 1; i < newLines.length; i++) {
+						if (!highlightedIndices.has(i - 1)) {
+							joined += '\n';
+						}
+						joined += newLines[i];
+					}
+					htmlCodeEl.innerHTML = joined;
+					htmlCodeEl.dataset.lineHighlighted = 'true';
+					htmlCodeEl.parentElement?.classList.add('has-line-highlight');
+				}
+			}, 0);
 		});
 	});
 }

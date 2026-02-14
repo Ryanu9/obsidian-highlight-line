@@ -1,6 +1,15 @@
 import { EditorView, Decoration, DecorationSet, ViewPlugin, ViewUpdate } from '@codemirror/view';
 import { RangeSetBuilder, EditorState } from '@codemirror/state';
 import type CodeHighlightPlugin from './main';
+import { HIGHLIGHT_PREFIXES, ALL_PREFIXES, HighlightType } from './settings';
+
+function hexToRgba(hex: string, opacity: number): string {
+	hex = hex.replace('#', '');
+	const r = parseInt(hex.substring(0, 2), 16);
+	const g = parseInt(hex.substring(2, 4), 16);
+	const b = parseInt(hex.substring(4, 6), 16);
+	return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+}
 
 interface CodeBlock {
 	from: number;
@@ -16,10 +25,14 @@ export function createEditorExtension(plugin: CodeHighlightPlugin) {
 			private codeBlocksCache: CodeBlock[] = [];
 			private lastDocLength: number = 0;
 			private lastCursorPos: number = -1;
-			private cachedRgbaColor: string = '';
+			private cachedColors: Record<HighlightType, string> = {
+				'highlight': '',
+				'diff-add': '',
+				'diff-remove': '',
+			};
 
 			constructor(view: EditorView) {
-				this.cachedRgbaColor = this.getRgbaColor(plugin);
+				this.updateCachedColors();
 				this.updateCodeBlocksCache(view.state);
 				this.decorations = this.buildDecorations(view);
 			}
@@ -31,10 +44,7 @@ export function createEditorExtension(plugin: CodeHighlightPlugin) {
 				const cursorMoved = cursorPos !== this.lastCursorPos;
 
 				// 检查是否需要更新缓存的颜色
-				const currentColor = this.getRgbaColor(plugin);
-				if (currentColor !== this.cachedRgbaColor) {
-					this.cachedRgbaColor = currentColor;
-				}
+				this.updateCachedColors();
 
 				// 文档改变时，重新构建缓存
 				if (docChanged) {
@@ -159,20 +169,25 @@ export function createEditorExtension(plugin: CodeHighlightPlugin) {
 						}
 
 						const text = line.text;
+						const matched = this.matchPrefix(text);
 
-						if (text.startsWith('>>>> ')) {
+						if (matched) {
+							const { type, prefixLength } = matched;
+							const cmClass = this.getCmClass(type);
+							const color = this.cachedColors[type];
+
 							// 添加行高亮装饰
 							const lineDeco = Decoration.line({
-								class: 'cm-code-highlight-line',
+								class: cmClass,
 								attributes: {
-									style: `background-color: ${this.cachedRgbaColor};`
+									style: `background-color: ${color};`
 								}
 							});
 							builder.add(line.from, line.from, lineDeco);
 
-							// 隐藏 ">>>> " 前缀（5个字符）
+							// 隐藏前缀
 							const hideDeco = Decoration.replace({});
-							builder.add(line.from, line.from + 5, hideDeco);
+							builder.add(line.from, line.from + prefixLength, hideDeco);
 						}
 					}
 				}
@@ -180,13 +195,32 @@ export function createEditorExtension(plugin: CodeHighlightPlugin) {
 				return builder.finish();
 			}
 
-			getRgbaColor(plugin: CodeHighlightPlugin): string {
-				const { backgroundColor, opacity } = plugin.settings;
-				const hex = backgroundColor.replace('#', '');
-				const r = parseInt(hex.substring(0, 2), 16);
-				const g = parseInt(hex.substring(2, 4), 16);
-				const b = parseInt(hex.substring(4, 6), 16);
-				return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+			matchPrefix(text: string): { type: HighlightType; prefixLength: number } | null {
+				if (text.startsWith(HIGHLIGHT_PREFIXES.HIGHLIGHT)) {
+					return { type: 'highlight', prefixLength: HIGHLIGHT_PREFIXES.HIGHLIGHT.length };
+				}
+				if (text.startsWith(HIGHLIGHT_PREFIXES.DIFF_ADD)) {
+					return { type: 'diff-add', prefixLength: HIGHLIGHT_PREFIXES.DIFF_ADD.length };
+				}
+				if (text.startsWith(HIGHLIGHT_PREFIXES.DIFF_REMOVE)) {
+					return { type: 'diff-remove', prefixLength: HIGHLIGHT_PREFIXES.DIFF_REMOVE.length };
+				}
+				return null;
+			}
+
+			getCmClass(type: HighlightType): string {
+				switch (type) {
+					case 'highlight': return 'cm-code-highlight-line';
+					case 'diff-add': return 'cm-code-highlight-diff-add';
+					case 'diff-remove': return 'cm-code-highlight-diff-remove';
+				}
+			}
+
+			updateCachedColors() {
+				const s = plugin.settings;
+				this.cachedColors['highlight'] = hexToRgba(s.backgroundColor, s.opacity);
+				this.cachedColors['diff-add'] = hexToRgba(s.diffAddColor, s.diffAddOpacity);
+				this.cachedColors['diff-remove'] = hexToRgba(s.diffRemoveColor, s.diffRemoveOpacity);
 			}
 		},
 		{
