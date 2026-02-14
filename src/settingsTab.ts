@@ -3,6 +3,7 @@ import type CodeHighlightPlugin from './main';
 
 export class CodeHighlightSettingTab extends PluginSettingTab {
 	plugin: CodeHighlightPlugin;
+	private previewBox: HTMLElement | null = null;
 
 	constructor(app: App, plugin: CodeHighlightPlugin) {
 		super(app, plugin);
@@ -62,18 +63,14 @@ export class CodeHighlightSettingTab extends PluginSettingTab {
 			opacityKey: 'diffRemoveOpacity',
 		});
 
+		// ---- Code Block Background ----
+		this.addBgColorSetting(containerEl);
+
 		// 预览区域
 		const previewContainer = containerEl.createDiv('highlight-preview-container');
 		previewContainer.createEl('h3', { text: 'Preview' });
-
-		const previewBox = previewContainer.createDiv('highlight-preview-box');
-
-		this.addPreviewLine(previewBox, '>>>> Highlighted line',
-			this.plugin.settings.backgroundColor, this.plugin.settings.opacity);
-		this.addPreviewLine(previewBox, '>>>+ Added line',
-			this.plugin.settings.diffAddColor, this.plugin.settings.diffAddOpacity);
-		this.addPreviewLine(previewBox, '>>>- Removed line',
-			this.plugin.settings.diffRemoveColor, this.plugin.settings.diffRemoveOpacity, true);
+		this.previewBox = previewContainer.createDiv('highlight-preview-box');
+		this.refreshPreview();
 	}
 
 	/**
@@ -128,6 +125,7 @@ export class CodeHighlightSettingTab extends PluginSettingTab {
 			(this.plugin.settings as any)[opts.colorKey] = val;
 			await this.plugin.saveSettings();
 			this.plugin.updateStyles();
+			this.refreshPreview();
 		});
 
 		hexInput.addEventListener('change', async () => {
@@ -138,6 +136,7 @@ export class CodeHighlightSettingTab extends PluginSettingTab {
 				(this.plugin.settings as any)[opts.colorKey] = val;
 				await this.plugin.saveSettings();
 				this.plugin.updateStyles();
+				this.refreshPreview();
 			} else {
 				hexInput.value = this.plugin.settings[opts.colorKey] as string;
 			}
@@ -149,15 +148,119 @@ export class CodeHighlightSettingTab extends PluginSettingTab {
 			(this.plugin.settings as any)[opts.opacityKey] = val;
 			await this.plugin.saveSettings();
 			this.plugin.updateStyles();
+			this.refreshPreview();
 		});
 	}
 
-	private addPreviewLine(container: HTMLElement, text: string, color: string, opacity: number, last = false): void {
-		const line = container.createEl('div');
-		line.createEl('code', { text });
-		line.style.backgroundColor = this.hexToRgba(color, opacity);
-		line.style.padding = '2px 4px';
-		if (!last) line.style.marginBottom = '4px';
+	private addBgColorSetting(containerEl: HTMLElement): void {
+		const setting = new Setting(containerEl)
+			.setName('Code block background')
+			.setDesc('Custom background color for code blocks. Leave empty to use theme default.');
+
+		const controlEl = setting.controlEl;
+		controlEl.empty();
+		controlEl.addClass('ch-color-control');
+
+		const currentColor = this.plugin.settings.codeBlockBg || '#1e1e1e';
+
+		const swatchWrapper = controlEl.createDiv('ch-swatch-wrapper');
+		const swatch = swatchWrapper.createEl('input', { type: 'color' });
+		swatch.addClass('ch-color-swatch');
+		swatch.value = currentColor;
+
+		const hexInput = controlEl.createEl('input', { type: 'text' });
+		hexInput.addClass('ch-hex-input');
+		hexInput.value = this.plugin.settings.codeBlockBg;
+		hexInput.maxLength = 7;
+		hexInput.spellcheck = false;
+		hexInput.placeholder = 'theme default';
+
+		const resetBtn = controlEl.createEl('button', { text: 'Reset' });
+		resetBtn.addClass('ch-reset-btn');
+
+		const update = async (val: string) => {
+			this.plugin.settings.codeBlockBg = val;
+			await this.plugin.saveSettings();
+			this.plugin.updateStyles();
+			this.refreshPreview();
+		};
+
+		swatch.addEventListener('input', async (e) => {
+			const val = (e.target as HTMLInputElement).value;
+			hexInput.value = val;
+			await update(val);
+		});
+
+		hexInput.addEventListener('change', async () => {
+			let val = hexInput.value.trim();
+			if (val === '') {
+				await update('');
+				return;
+			}
+			if (!val.startsWith('#')) val = '#' + val;
+			if (/^#[0-9a-fA-F]{6}$/.test(val)) {
+				swatch.value = val;
+				await update(val);
+			} else {
+				hexInput.value = this.plugin.settings.codeBlockBg;
+			}
+		});
+
+		resetBtn.addEventListener('click', async () => {
+			hexInput.value = '';
+			this.plugin.settings.codeBlockBg = '';
+			await this.plugin.saveSettings();
+			this.plugin.updateStyles();
+			this.refreshPreview();
+		});
+	}
+
+	private refreshPreview(): void {
+		if (!this.previewBox) return;
+		const box = this.previewBox;
+		box.empty();
+
+		if (this.plugin.settings.codeBlockBg) {
+			box.style.backgroundColor = this.plugin.settings.codeBlockBg;
+		} else {
+			box.style.backgroundColor = '';
+		}
+
+		const s = this.plugin.settings;
+
+		const kw = 'var(--color-blue)';       // keyword: function, const, return
+		const fn = 'var(--color-yellow)';      // function name / call
+		const str = 'var(--color-green)';      // string / template literal
+		const pr = 'var(--color-purple)';      // property
+		const cm = 'var(--text-faint)';        // punctuation / plain
+		const nm = 'var(--text-normal)';       // normal text
+
+		const span = (text: string, color: string) =>
+			`<span style="color:${color}">${text}</span>`;
+
+		const lines: { html: string; bg?: string }[] = [
+			{ html: `${span('function', kw)} ${span('greet', fn)}${span('(', cm)}${span('name', nm)}${span(') {', cm)}` },
+			{ html: `  ${span('const', kw)} ${span('msg', nm)} ${span('=', cm)} ${span('`Hello, ${', str)}${span('name', nm)}${span('}!`', str)}${span(';', cm)}`,
+			  bg: this.hexToRgba(s.backgroundColor, s.opacity) },
+			{ html: `  ${span('console', nm)}${span('.', cm)}${span('log', fn)}${span('(', cm)}${span('msg', pr)}${span(');', cm)}`,
+			  bg: this.hexToRgba(s.backgroundColor, s.opacity) },
+			{ html: `  ${span('return', kw)} ${span('msg', pr)}${span(';', cm)}` },
+			{ html: span('}', cm) },
+			{ html: '\u00A0' },
+			{ html: `${span('-', cm)} ${span('const', kw)} ${span('old', nm)} ${span('=', cm)} ${span('getOld', fn)}${span('();', cm)}`,
+			  bg: this.hexToRgba(s.diffRemoveColor, s.diffRemoveOpacity) },
+			{ html: `${span('+', cm)} ${span('const', kw)} ${span('val', nm)} ${span('=', cm)} ${span('getNew', fn)}${span('();', cm)}`,
+			  bg: this.hexToRgba(s.diffAddColor, s.diffAddOpacity) },
+			{ html: `  ${span('process', fn)}${span('(', cm)}${span('val', pr)}${span(');', cm)}` },
+		];
+
+		for (const l of lines) {
+			const lineEl = box.createDiv('ch-preview-line');
+			lineEl.innerHTML = l.html;
+			if (l.bg) {
+				lineEl.style.backgroundColor = l.bg;
+			}
+		}
 	}
 
 	hexToRgba(hex: string, opacity: number): string {

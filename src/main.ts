@@ -203,26 +203,17 @@ export default class CodeHighlightPlugin extends Plugin {
 			.cm-code-highlight-diff-remove {
 				background-color: ${rgbaDiffRemove} !important;
 			}
-
-			.highlight-preview-container {
-				margin-top: 20px;
-				padding: 15px;
-				background-color: var(--background-secondary);
-				border-radius: 5px;
+			${this.settings.codeBlockBg ? `
+			.markdown-rendered pre[class*="language-"],
+			.markdown-rendered pre:not([class]),
+			.markdown-source-view .cm-line {
+				/* handled by code-highlight codeBlockBg */
 			}
-			
-			.highlight-preview-box {
-				padding: 10px;
-				border: 1px solid var(--background-modifier-border);
-				border-radius: 3px;
-				background-color: var(--background-primary);
-				font-family: var(--font-monospace);
+			.markdown-rendered pre,
+			.cm-s-obsidian .HyperMD-codeblock-bg {
+				background-color: ${this.settings.codeBlockBg} !important;
 			}
-			
-			.highlight-preview-box code {
-				padding: 2px 4px;
-				border-radius: 3px;
-			}
+			` : ''}
 		`;
 		document.head.appendChild(style);
 	}

@@ -7,6 +7,7 @@ export interface CodeHighlightSettings {
 	diffRemoveColor: string;
 	diffRemoveOpacity: number;
 	showPrefixInReadingMode: boolean;
+	codeBlockBg: string;
 }
 
 export const DEFAULT_SETTINGS: CodeHighlightSettings = {
@@ -17,7 +18,8 @@ export const DEFAULT_SETTINGS: CodeHighlightSettings = {
 	diffAddOpacity: 0.3,
 	diffRemoveColor: '#f85149', // 默认红色
 	diffRemoveOpacity: 0.3,
-	showPrefixInReadingMode: false
+	showPrefixInReadingMode: false,
+	codeBlockBg: ''
 };
 
 // 高亮前缀定义

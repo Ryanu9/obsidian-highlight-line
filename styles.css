@@ -58,13 +58,15 @@
 	padding: 10px;
 	border: 1px solid var(--background-modifier-border);
 	border-radius: 3px;
-	background-color: var(--background-primary);
+	background-color: var(--code-background);
 	font-family: var(--font-monospace);
+	font-size: 13px;
+	line-height: 1.6;
 }
 
-.highlight-preview-box code {
-	padding: 2px 4px;
-	border-radius: 3px;
+.ch-preview-line {
+	padding: 0 8px;
+	white-space: pre;
 }
 
 /* Style Settings 风格颜色选择器 */
