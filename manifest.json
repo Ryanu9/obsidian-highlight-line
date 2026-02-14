@@ -3,7 +3,7 @@
 	"name": "highlight-line",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "Highlight code block lines starting with '>>>> ' prefix",
+	"description": "Highlight code block lines with '>>>> ' prefix, shell prompt coloring, and ANSI escape code rendering",
 	"author": "c1trus",
 	"authorUrl": "",
 	"isDesktopOnly": false

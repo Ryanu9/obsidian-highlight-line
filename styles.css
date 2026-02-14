@@ -132,3 +132,37 @@
 	min-width: 32px;
 	text-align: right;
 }
+
+/* ANSI Code Block Styles */
+.ansi-block {
+    white-space: pre-wrap;
+    font-family: var(--font-monospace) !important;
+    background-color: var(--background-primary-alt);
+    padding: var(--size-4-2);
+    border-radius: var(--radius-s);
+    overflow-x: auto;
+}
+
+.ansi-block span {
+    font-family: inherit !important;
+}
+
+.ansi-toggle-button {
+    position: absolute;
+    right: 10px;
+    top: 5px;
+    /* Adjust according to line height */
+    font-size: 12px;
+    opacity: 0.6;
+    z-index: 100;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--background-modifier-border);
+    color: var(--text-normal);
+}
+
+.ansi-toggle-button:hover {
+    opacity: 1;
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+}
