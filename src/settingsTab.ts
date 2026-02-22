@@ -1,9 +1,16 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
 import type CodeHighlightPlugin from './main';
+import type { CodeHighlightSettings } from './settings';
+
+type SettingsKey = keyof CodeHighlightSettings;
+type TabId = 'ansi' | 'diff' | 'burp';
 
 export class CodeHighlightSettingTab extends PluginSettingTab {
 	plugin: CodeHighlightPlugin;
 	private previewBox: HTMLElement | null = null;
+	private activeTab: TabId = 'ansi';
+	private tabButtons: Map<TabId, HTMLElement> = new Map();
+	private tabPanels: Map<TabId, HTMLElement> = new Map();
 
 	constructor(app: App, plugin: CodeHighlightPlugin) {
 		super(app, plugin);
@@ -14,73 +21,147 @@ export class CodeHighlightSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		containerEl.createEl('h2', { text: 'Code Highlight Settings' });
+		// Tab bar
+		const tabBar = containerEl.createDiv({ cls: 'ch-tab-bar' });
+		const tabs: { id: TabId; label: string }[] = [
+			{ id: 'ansi', label: 'ANSI Highlight' },
+			{ id: 'diff', label: 'Code Diff Highlight' },
+			{ id: 'burp', label: 'Burp Highlight' },
+		];
 
-		// 开关设置
-		new Setting(containerEl)
+		for (const tab of tabs) {
+			const btn = tabBar.createEl('button', { text: tab.label, cls: 'ch-tab-btn' });
+			btn.addEventListener('click', () => this.switchTab(tab.id));
+			this.tabButtons.set(tab.id, btn);
+		}
+
+		// Panels
+		const panelContainer = containerEl.createDiv({ cls: 'ch-tab-panels' });
+
+		const ansiPanel = panelContainer.createDiv({ cls: 'ch-tab-panel' });
+		this.tabPanels.set('ansi', ansiPanel);
+		this.createAnsiSection(ansiPanel);
+
+		const diffPanel = panelContainer.createDiv({ cls: 'ch-tab-panel' });
+		this.tabPanels.set('diff', diffPanel);
+		this.createDiffSection(diffPanel);
+
+		const burpPanel = panelContainer.createDiv({ cls: 'ch-tab-panel' });
+		this.tabPanels.set('burp', burpPanel);
+		this.createBurpSection(burpPanel);
+
+		this.switchTab(this.activeTab);
+	}
+
+	private switchTab(id: TabId): void {
+		this.activeTab = id;
+		for (const [tabId, btn] of this.tabButtons) {
+			btn.toggleClass('ch-tab-active', tabId === id);
+		}
+		for (const [tabId, panel] of this.tabPanels) {
+			panel.style.display = tabId === id ? '' : 'none';
+		}
+	}
+
+	// ==================== ANSI Highlight ====================
+	private createAnsiSection(el: HTMLElement): void {
+		new Setting(el)
+			.setName('Enable ANSI code blocks')
+			.setDesc('Render ANSI escape codes in ```ansi code blocks')
+			.addToggle(t => t
+				.setValue(this.plugin.settings.ansiEnabled)
+				.onChange(async v => {
+					this.plugin.settings.ansiEnabled = v;
+					await this.plugin.saveSettings();
+					this.plugin.refreshViews();
+				}));
+
+		this.addBgSetting(el, 'Light theme background', 'ansiLightBg');
+		this.addBgSetting(el, 'Dark theme background', 'ansiDarkBg');
+		this.addFontSetting(el, 'Font family', 'ansiFont');
+		this.addFontSizeSetting(el, 'Font size', 'ansiFontSize');
+	}
+
+	// ==================== Code Diff Highlight ====================
+	private createDiffSection(el: HTMLElement): void {
+		new Setting(el)
 			.setName('Enable highlighting')
-			.setDesc('Turn on/off code block highlighting')
-			.addToggle(toggle => toggle
+			.setDesc('Turn on/off >>>> line highlighting')
+			.addToggle(t => t
 				.setValue(this.plugin.settings.enabled)
-				.onChange(async (value) => {
-					this.plugin.settings.enabled = value;
+				.onChange(async v => {
+					this.plugin.settings.enabled = v;
 					await this.plugin.saveSettings();
 					this.plugin.refreshViews();
 				}));
 
-		new Setting(containerEl)
+		new Setting(el)
 			.setName('Show prefix in Reading Mode')
-			.setDesc('Show the prefix in Reading Mode. When disabled, the prefix is hidden but the line is still highlighted.')
-			.addToggle(toggle => toggle
+			.setDesc('Show the >>>> prefix in Reading Mode')
+			.addToggle(t => t
 				.setValue(this.plugin.settings.showPrefixInReadingMode)
-				.onChange(async (value) => {
-					this.plugin.settings.showPrefixInReadingMode = value;
+				.onChange(async v => {
+					this.plugin.settings.showPrefixInReadingMode = v;
 					await this.plugin.saveSettings();
 					this.plugin.refreshViews();
 				}));
 
-		// ---- >>>> Highlight ----
-		this.addColorSetting(containerEl, {
+		this.addColorSetting(el, {
 			name: '>>>> Highlight',
 			desc: 'Background color and opacity for highlighted lines',
 			colorKey: 'backgroundColor',
 			opacityKey: 'opacity',
 		});
 
-		// ---- >>>+ Diff Add ----
-		this.addColorSetting(containerEl, {
+		this.addColorSetting(el, {
 			name: '>>>+ Diff Add',
 			desc: 'Background color and opacity for diff-add lines',
 			colorKey: 'diffAddColor',
 			opacityKey: 'diffAddOpacity',
 		});
 
-		// ---- >>>- Diff Remove ----
-		this.addColorSetting(containerEl, {
+		this.addColorSetting(el, {
 			name: '>>>- Diff Remove',
 			desc: 'Background color and opacity for diff-remove lines',
 			colorKey: 'diffRemoveColor',
 			opacityKey: 'diffRemoveOpacity',
 		});
 
-		// ---- Code Block Background ----
-		this.addBgColorSetting(containerEl);
+		this.addBgSetting(el, 'Light theme code block background', 'codeLightBg');
+		this.addBgSetting(el, 'Dark theme code block background', 'codeDarkBg');
 
-		// 预览区域
-		const previewContainer = containerEl.createDiv('highlight-preview-container');
+		// Preview
+		const previewContainer = el.createDiv('highlight-preview-container');
 		previewContainer.createEl('h3', { text: 'Preview' });
 		this.previewBox = previewContainer.createDiv('highlight-preview-box');
 		this.refreshPreview();
 	}
 
-	/**
-	 * Style Settings 风格的颜色选择器：色块 + hex 输入框 + 透明度滑块
-	 */
+	// ==================== Burp Highlight ====================
+	private createBurpSection(el: HTMLElement): void {
+		new Setting(el)
+			.setName('Enable Burp code blocks')
+			.setDesc('Render side-by-side HTTP request/response in ```burp blocks')
+			.addToggle(t => t
+				.setValue(this.plugin.settings.burpEnabled)
+				.onChange(async v => {
+					this.plugin.settings.burpEnabled = v;
+					await this.plugin.saveSettings();
+					this.plugin.refreshViews();
+				}));
+
+		this.addBgSetting(el, 'Light theme background', 'burpLightBg');
+		this.addBgSetting(el, 'Dark theme background', 'burpDarkBg');
+		this.addFontSetting(el, 'Font family', 'burpFont');
+		this.addFontSizeSetting(el, 'Font size', 'burpFontSize');
+	}
+
+	// ==================== Helper: Color + Opacity ====================
 	private addColorSetting(containerEl: HTMLElement, opts: {
 		name: string;
 		desc: string;
-		colorKey: keyof CodeHighlightPlugin['settings'];
-		opacityKey: keyof CodeHighlightPlugin['settings'];
+		colorKey: SettingsKey;
+		opacityKey: SettingsKey;
 	}): void {
 		const setting = new Setting(containerEl)
 			.setName(opts.name)
@@ -93,20 +174,17 @@ export class CodeHighlightSettingTab extends PluginSettingTab {
 		const currentColor = this.plugin.settings[opts.colorKey] as string;
 		const currentOpacity = this.plugin.settings[opts.opacityKey] as number;
 
-		// 颜色预览色块 + native color picker
 		const swatchWrapper = controlEl.createDiv('ch-swatch-wrapper');
 		const swatch = swatchWrapper.createEl('input', { type: 'color' });
 		swatch.addClass('ch-color-swatch');
 		swatch.value = currentColor;
 
-		// Hex 文本输入框
 		const hexInput = controlEl.createEl('input', { type: 'text' });
 		hexInput.addClass('ch-hex-input');
 		hexInput.value = currentColor;
 		hexInput.maxLength = 7;
 		hexInput.spellcheck = false;
 
-		// 透明度滑块
 		const opacityWrapper = controlEl.createDiv('ch-opacity-wrapper');
 		const opacitySlider = opacityWrapper.createEl('input', { type: 'range' });
 		opacitySlider.addClass('ch-opacity-slider');
@@ -118,7 +196,6 @@ export class CodeHighlightSettingTab extends PluginSettingTab {
 		const opacityLabel = opacityWrapper.createEl('span', { text: `${Math.round(currentOpacity * 100)}%` });
 		opacityLabel.addClass('ch-opacity-label');
 
-		// --- Events ---
 		swatch.addEventListener('input', async (e) => {
 			const val = (e.target as HTMLInputElement).value;
 			hexInput.value = val;
@@ -152,16 +229,17 @@ export class CodeHighlightSettingTab extends PluginSettingTab {
 		});
 	}
 
-	private addBgColorSetting(containerEl: HTMLElement): void {
+	// ==================== Helper: Background Color ====================
+	private addBgSetting(containerEl: HTMLElement, name: string, key: SettingsKey): void {
 		const setting = new Setting(containerEl)
-			.setName('Code block background')
-			.setDesc('Custom background color for code blocks. Leave empty to use theme default.');
+			.setName(name)
+			.setDesc('Leave empty for theme default');
 
 		const controlEl = setting.controlEl;
 		controlEl.empty();
 		controlEl.addClass('ch-color-control');
 
-		const currentColor = this.plugin.settings.codeBlockBg || '#1e1e1e';
+		const currentColor = (this.plugin.settings[key] as string) || '#1e1e1e';
 
 		const swatchWrapper = controlEl.createDiv('ch-swatch-wrapper');
 		const swatch = swatchWrapper.createEl('input', { type: 'color' });
@@ -170,7 +248,7 @@ export class CodeHighlightSettingTab extends PluginSettingTab {
 
 		const hexInput = controlEl.createEl('input', { type: 'text' });
 		hexInput.addClass('ch-hex-input');
-		hexInput.value = this.plugin.settings.codeBlockBg;
+		hexInput.value = (this.plugin.settings[key] as string) || '';
 		hexInput.maxLength = 7;
 		hexInput.spellcheck = false;
 		hexInput.placeholder = 'theme default';
@@ -179,7 +257,7 @@ export class CodeHighlightSettingTab extends PluginSettingTab {
 		resetBtn.addClass('ch-reset-btn');
 
 		const update = async (val: string) => {
-			this.plugin.settings.codeBlockBg = val;
+			(this.plugin.settings as any)[key] = val;
 			await this.plugin.saveSettings();
 			this.plugin.updateStyles();
 			this.refreshPreview();
@@ -193,54 +271,81 @@ export class CodeHighlightSettingTab extends PluginSettingTab {
 
 		hexInput.addEventListener('change', async () => {
 			let val = hexInput.value.trim();
-			if (val === '') {
-				await update('');
-				return;
-			}
+			if (val === '') { await update(''); return; }
 			if (!val.startsWith('#')) val = '#' + val;
 			if (/^#[0-9a-fA-F]{6}$/.test(val)) {
 				swatch.value = val;
 				await update(val);
 			} else {
-				hexInput.value = this.plugin.settings.codeBlockBg;
+				hexInput.value = (this.plugin.settings[key] as string) || '';
 			}
 		});
 
 		resetBtn.addEventListener('click', async () => {
 			hexInput.value = '';
-			this.plugin.settings.codeBlockBg = '';
-			await this.plugin.saveSettings();
-			this.plugin.updateStyles();
-			this.refreshPreview();
+			await update('');
 		});
 	}
 
+	// ==================== Helper: Font Family ====================
+	private addFontSetting(containerEl: HTMLElement, name: string, key: SettingsKey): void {
+		new Setting(containerEl)
+			.setName(name)
+			.setDesc('Leave empty for theme default')
+			.addText(text => text
+				.setPlaceholder('e.g. Consolas, monospace')
+				.setValue((this.plugin.settings[key] as string) || '')
+				.onChange(async (value) => {
+					(this.plugin.settings as any)[key] = value.trim();
+					await this.plugin.saveSettings();
+					this.plugin.updateStyles();
+				}));
+	}
+
+	// ==================== Helper: Font Size ====================
+	private addFontSizeSetting(containerEl: HTMLElement, name: string, key: SettingsKey): void {
+		const currentSize = (this.plugin.settings[key] as number) || 0;
+		const setting = new Setting(containerEl)
+			.setName(name)
+			.setDesc(currentSize ? `${currentSize}px` : 'Theme default');
+
+		setting.addSlider(slider => slider
+			.setLimits(0, 24, 1)
+			.setValue(currentSize)
+			.setDynamicTooltip()
+			.onChange(async (value) => {
+				(this.plugin.settings as any)[key] = value;
+				setting.setDesc(value ? `${value}px` : 'Theme default');
+				await this.plugin.saveSettings();
+				this.plugin.updateStyles();
+			}));
+	}
+
+	// ==================== Preview ====================
 	private refreshPreview(): void {
 		if (!this.previewBox) return;
 		const box = this.previewBox;
 		box.empty();
 
-		if (this.plugin.settings.codeBlockBg) {
-			box.style.backgroundColor = this.plugin.settings.codeBlockBg;
-		} else {
-			box.style.backgroundColor = '';
-		}
+		const isDark = document.body.classList.contains('theme-dark');
+		const bg = isDark ? this.plugin.settings.codeDarkBg : this.plugin.settings.codeLightBg;
+		box.style.backgroundColor = bg || '';
 
 		const s = this.plugin.settings;
 
-		const kw = 'var(--color-blue)';       // keyword: function, const, return
-		const fn = 'var(--color-yellow)';      // function name / call
-		const str = 'var(--color-green)';      // string / template literal
-		const pr = 'var(--color-purple)';      // property
-		const cm = 'var(--text-faint)';        // punctuation / plain
-		const nm = 'var(--text-normal)';       // normal text
+		const kw = 'var(--color-blue)';
+		const fn = 'var(--color-yellow)';
+		const str = 'var(--color-green)';
+		const pr = 'var(--color-purple)';
+		const cm = 'var(--text-faint)';
+		const nm = 'var(--text-normal)';
 
 		const span = (text: string, color: string) =>
 			`<span style="color:${color}">${text}</span>`;
 
 		const lines: { html: string; bg?: string }[] = [
 			{ html: `${span('function', kw)} ${span('greet', fn)}${span('(', cm)}${span('name', nm)}${span(') {', cm)}` },
-			{ html: `  ${span('const', kw)} ${span('msg', nm)} ${span('=', cm)} ${span('`Hello, ${', str)}${span('name', nm)}${span('}!`', str)}${span(';', cm)}`,
+			{ html: `  ${span('const', kw)} ${span('msg', nm)} ${span('=', cm)} ${span('\`Hello, \${', str)}${span('name', nm)}${span('}\`', str)}${span(';', cm)}`,
 			  bg: this.hexToRgba(s.backgroundColor, s.opacity) },
 			{ html: `  ${span('console', nm)}${span('.', cm)}${span('log', fn)}${span('(', cm)}${span('msg', pr)}${span(');', cm)}`,
 			  bg: this.hexToRgba(s.backgroundColor, s.opacity) },
@@ -271,6 +376,4 @@ export class CodeHighlightSettingTab extends PluginSettingTab {
 		return `rgba(${r}, ${g}, ${b}, ${opacity})`;
 	}
 }
-
-
 

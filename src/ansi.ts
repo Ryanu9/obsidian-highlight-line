@@ -14,9 +14,9 @@ export interface AnsiToken {
 }
 
 export const palette: { [key: number]: string } = {
-    30: "#000000", 31: "#f14c3c", 32: "#0dbc79", 33: "#e5e510",
+    30: "#000000", 31: "#cd3131", 32: "#0dbc79", 33: "#e5e510",
     34: "#2472c8", 35: "#bc3fbc", 36: "#11a8cd", 37: "#e5e5e5",
-    90: "#666666", 91: "#f14c3c", 92: "#23d18b", 93: "#f5f543",
+    90: "#666666", 91: "#f14c4c", 92: "#23d18b", 93: "#f5f543",
     94: "#3b8eea", 95: "#d670d6", 96: "#29b8db", 97: "#e5e5e5",
 };
 
@@ -203,6 +203,27 @@ function adjustColorForContrast(fgColor: string, bgColor: string, minContrast = 
     return `rgb(${bestRgb.r}, ${bestRgb.g}, ${bestRgb.b})`;
 }
 
+// 256-color index to RGB conversion
+function index256ToRgb(n: number): string | null {
+    if (n < 0 || n > 255) return null;
+    // 0-7: standard colors (reuse palette)
+    if (n <= 7) return palette[n + 30] || null;
+    // 8-15: bright colors (reuse palette)
+    if (n <= 15) return palette[n - 8 + 90] || null;
+    // 16-231: 6×6×6 color cube
+    if (n <= 231) {
+        const idx = n - 16;
+        const ri = Math.floor(idx / 36);
+        const gi = Math.floor((idx % 36) / 6);
+        const bi = idx % 6;
+        const levels = [0, 95, 135, 175, 215, 255];
+        return `rgb(${levels[ri]}, ${levels[gi]}, ${levels[bi]})`;
+    }
+    // 232-255: grayscale (24 shades)
+    const gray = 8 + (n - 232) * 10;
+    return `rgb(${gray}, ${gray}, ${gray})`;
+}
+
 const DEFAULT_BG_COLOR = "rgb(31, 31, 31)";
 const DEFAULT_FG_COLOR = "rgb(204, 204, 204)";
 
@@ -275,6 +296,11 @@ export function parseAnsi(text: string): AnsiToken[] {
                             }
                             i += 4;
                         } else if (type === 5) {
+                            const idx = codes[i + 2];
+                            if (idx !== undefined) {
+                                const c = index256ToRgb(idx);
+                                if (c) currentStyle.color = c;
+                            }
                             i += 2;
                         }
                     } else if (code === 39) {
@@ -295,6 +321,11 @@ export function parseAnsi(text: string): AnsiToken[] {
                             }
                             i += 4;
                         } else if (type === 5) {
+                            const idx = codes[i + 2];
+                            if (idx !== undefined) {
+                                const c = index256ToRgb(idx);
+                                if (c) currentStyle.backgroundColor = c;
+                            }
                             i += 2;
                         }
                     } else if (code === 49) {

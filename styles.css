@@ -168,3 +168,178 @@
     background: var(--interactive-accent);
     color: var(--text-on-accent);
 }
+
+/* ========== Settings Tab Bar ========== */
+
+.ch-tab-bar {
+    display: flex;
+    gap: 0;
+    border-bottom: 2px solid var(--background-modifier-border);
+    margin-bottom: 16px;
+}
+
+.ch-tab-btn {
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    background: none;
+    color: var(--text-muted);
+    transition: color 0.15s, border-color 0.15s;
+}
+
+.ch-tab-btn:hover {
+    color: var(--text-normal);
+}
+
+.ch-tab-btn.ch-tab-active {
+    color: var(--interactive-accent);
+    border-bottom-color: var(--interactive-accent);
+    font-weight: 600;
+}
+
+.ch-tab-panel {
+    padding: 0;
+}
+
+.ch-reset-btn {
+    padding: 4px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-secondary);
+    color: var(--text-muted);
+}
+
+.ch-reset-btn:hover {
+    background: var(--background-modifier-hover);
+    color: var(--text-normal);
+}
+
+/* ========== Burp Color Palettes ========== */
+
+/* Light theme – high contrast on #FFFFFF */
+.theme-light .burp-content {
+    --burp-req-method: #0550AE;
+    --burp-req-path: #953800;
+    --burp-req-version: #656D76;
+    --burp-req-hdr-name: #0A7B83;
+    --burp-req-hdr-val: #24292F;
+    --burp-req-body: #24292F;
+    --burp-line-num: #8C959F;
+    --burp-res-version: #656D76;
+    --burp-res-hdr-name: #0550AE;
+    --burp-res-hdr-val: #953800;
+    --burp-res-body: #24292F;
+    --burp-tag: #CF222E;
+    --burp-attr-name: #953800;
+    --burp-attr-val: #116329;
+    --burp-comment: #8C959F;
+    --burp-status-2xx: #116329;
+    --burp-status-3xx: #7D4E00;
+    --burp-status-4xx: #CF222E;
+}
+
+/* Dark theme – high contrast on #2B2B2B */
+.theme-dark .burp-content {
+    --burp-req-method: #79C0FF;
+    --burp-req-path: #FFA657;
+    --burp-req-version: #8B949E;
+    --burp-req-hdr-name: #56D4DD;
+    --burp-req-hdr-val: #E6EDF3;
+    --burp-req-body: #E6EDF3;
+    --burp-line-num: #6E7681;
+    --burp-res-version: #8B949E;
+    --burp-res-hdr-name: #79C0FF;
+    --burp-res-hdr-val: #FFA657;
+    --burp-res-body: #E6EDF3;
+    --burp-tag: #FF7B72;
+    --burp-attr-name: #FFA657;
+    --burp-attr-val: #7EE787;
+    --burp-comment: #8B949E;
+    --burp-status-2xx: #7EE787;
+    --burp-status-3xx: #E3B341;
+    --burp-status-4xx: #FF7B72;
+}
+
+/* ========== Burp HTTP Block ========== */
+
+.burp-container {
+    display: flex;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    overflow: hidden;
+    line-height: 1.6;
+}
+
+.burp-panel {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.burp-request {
+    border-right: 2px solid var(--background-modifier-border);
+}
+
+.burp-request:last-child {
+    border-right: none;
+}
+
+.burp-panel-header {
+    padding: 6px 14px;
+    font-weight: 700;
+    font-size: 14px;
+    user-select: none;
+    flex-shrink: 0;
+    background: var(--background-secondary);
+    color: var(--text-normal);
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.burp-content {
+    margin: 0 !important;
+    padding: 4px 0 !important;
+    overflow: auto;
+    flex: 1;
+    max-height: 500px;
+    border: none !important;
+    border-radius: 0 !important;
+    background-color: var(--code-background) !important;
+}
+
+.burp-line {
+    display: flex;
+    padding: 0 12px 0 0;
+    min-height: 1.6em;
+    align-items: flex-start;
+}
+
+/* Override highlight prefix display in burp context */
+.burp-line.code-highlight-line,
+.burp-line.code-highlight-diff-add,
+.burp-line.code-highlight-diff-remove {
+    display: flex !important;
+    margin: 0 !important;
+}
+
+.burp-line-num {
+    flex-shrink: 0;
+    width: 36px;
+    text-align: right;
+    padding-right: 12px;
+    user-select: none;
+    font-variant-numeric: tabular-nums;
+}
+
+.burp-line-text {
+    flex: 1;
+    min-width: 0;
+    white-space: pre-wrap;
+    word-break: break-all;
+}

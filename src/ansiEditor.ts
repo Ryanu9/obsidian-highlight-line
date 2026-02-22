@@ -115,7 +115,7 @@ function ansiDecorations(view: EditorView) {
                     // If we didn't find a distinct parent, or result is just the current line
                     // We verify if current line is the start
                     const text = line.text;
-                    if (/^```ansi\s*$/.test(text) || /^```ansi\s+/.test(text)) {
+                    if (/^```(?:ansi|a)\s*$/.test(text) || /^```(?:ansi|a)\s+/.test(text)) {
                         blockStart = line.from;
                         foundStart = true;
                     } else {
@@ -128,12 +128,12 @@ function ansiDecorations(view: EditorView) {
                             const text = prevLine.text;
                             // Heuristic: If we hit another fence ``` without ansi, we might have crossed out?
                             // Standard markdown does not allow nested blocks.
-                            if (/^```ansi\s*$/.test(text) || /^```ansi\s+/.test(text)) {
+                            if (/^```(?:ansi|a)\s*$/.test(text) || /^```(?:ansi|a)\s+/.test(text)) {
                                 blockStart = prevLine.from;
                                 foundStart = true;
                                 break;
                             }
-                            if (/^```/.test(text) && !text.includes("ansi")) {
+                            if (/^```/.test(text) && !/^```(?:ansi|a)(?:\s|$)/.test(text)) {
                                 // Likely start/end of another block.
                                 // Stop.
                                 break;
@@ -186,7 +186,7 @@ function ansiDecorations(view: EditorView) {
 
                     // Verify "ansi" again just in case
                     const startLineText = state.doc.lineAt(start).text;
-                    if (!startLineText.trim().startsWith("```ansi")) {
+                    if (!/^```(?:ansi|a)(?:\s|$)/.test(startLineText.trim())) {
                         pos = line.to + 1;
                         continue;
                     }
@@ -304,7 +304,7 @@ export const ansiPlugin = ViewPlugin.fromClass(class {
             // Note: For huge docs this regex scan might be heavy on every copy.
             // But usually copy happens on user interaction which is infrequent.
             const blocks: { start: number, end: number, isRaw: boolean }[] = [];
-            const regex = /^```ansi\s*$/gm;
+            const regex = /^```(?:ansi|a)\s*$/gm;
             const endRegex = /^```$/gm;
             let match;
             while ((match = regex.exec(text)) !== null) {

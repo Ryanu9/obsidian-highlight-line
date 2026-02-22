@@ -41,7 +41,7 @@ const COLORS = {
     CMD_COMMAND: '#11A8CD',  // 命令 浅黄色
     CMD_TEXT: '#DCDCDC',     // 普通文本 浅黄色
     CMD_PARAM: '#0DB374',    // 参数 蓝色
-    CMD_STRING: '#E5D818',   // 字符串 橙色
+    CMD_STRING: '#D9BF37',   // 字符串 橙色
     CMD_SYMBOL: '#236EC0',   // 符号 | > { } () $ 紫色
 };
 
@@ -89,7 +89,7 @@ export function registerPromptHighlightProcessor(plugin: CodeHighlightPlugin): v
             const htmlCodeEl = codeEl as HTMLElement;
             const language = getCodeBlockLanguage(htmlCodeEl);
 
-            if (!isShellLanguage(language)) return;
+            if (!isSupportedLanguage(language)) return;
 
             // Use setTimeout to ensure we run after Obsidian's syntax highlighting
             setTimeout(() => {
@@ -115,17 +115,40 @@ function getCodeBlockLanguage(codeEl: HTMLElement): string {
 }
 
 /**
- * Check if the language is a shell language
+ * Check if the language should have prompt highlighting
+ * All languages are supported except 'ansi' (which has its own dedicated processor)
  */
-function isShellLanguage(language: string): boolean {
-    const shellLanguages = ['bash', 'sh', 'shell', 'zsh', 'powershell', 'pwsh', 'ps1', 'console', 'terminal', 'cmd'];
-    return shellLanguages.includes(language);
+function isSupportedLanguage(language: string): boolean {
+    const excluded = ['ansi', 'a'];
+    return !excluded.includes(language);
 }
 
 /**
  * Process a code block and highlight prompts
+ * Includes MutationObserver guard against Prism overwriting our changes
  */
 function processCodeBlock(codeEl: HTMLElement): void {
+    applyPromptHighlighting(codeEl);
+
+    // Guard: if Prism syntax highlighter runs after us and overwrites innerHTML,
+    // re-apply our prompt highlighting once upon detecting .token spans
+    let guarded = false;
+    const observer = new MutationObserver(() => {
+        if (guarded) return;
+        if (codeEl.querySelector('span.token')) {
+            guarded = true;
+            observer.disconnect();
+            applyPromptHighlighting(codeEl);
+        }
+    });
+    observer.observe(codeEl, { childList: true, subtree: true });
+    setTimeout(() => observer.disconnect(), 3000);
+}
+
+/**
+ * Apply prompt highlighting to each line of a code block
+ */
+function applyPromptHighlighting(codeEl: HTMLElement): void {
     const html = codeEl.innerHTML;
     const lines = html.split('\n');
     let hasHighlight = false;

@@ -1,4 +1,5 @@
 export interface CodeHighlightSettings {
+	// Code Diff Highlight
 	enabled: boolean;
 	backgroundColor: string;
 	opacity: number;
@@ -7,19 +8,50 @@ export interface CodeHighlightSettings {
 	diffRemoveColor: string;
 	diffRemoveOpacity: number;
 	showPrefixInReadingMode: boolean;
-	codeBlockBg: string;
+	codeLightBg: string;
+	codeDarkBg: string;
+
+	// ANSI Highlight
+	ansiEnabled: boolean;
+	ansiLightBg: string;
+	ansiDarkBg: string;
+	ansiFont: string;
+	ansiFontSize: number;
+
+	// Burp Highlight
+	burpEnabled: boolean;
+	burpLightBg: string;
+	burpDarkBg: string;
+	burpFont: string;
+	burpFontSize: number;
 }
 
 export const DEFAULT_SETTINGS: CodeHighlightSettings = {
+	// Code Diff Highlight
 	enabled: true,
-	backgroundColor: '#4d4d4d', // 默认灰色 (R:77, G:77, B:77)
-	opacity: 0.5, // 默认 50% 透明度
-	diffAddColor: '#2ea043', // 默认绿色
+	backgroundColor: '#4d4d4d',
+	opacity: 0.5,
+	diffAddColor: '#2ea043',
 	diffAddOpacity: 0.3,
-	diffRemoveColor: '#f85149', // 默认红色
+	diffRemoveColor: '#f85149',
 	diffRemoveOpacity: 0.3,
 	showPrefixInReadingMode: false,
-	codeBlockBg: ''
+	codeLightBg: '',
+	codeDarkBg: '',
+
+	// ANSI Highlight
+	ansiEnabled: true,
+	ansiLightBg: '',
+	ansiDarkBg: '',
+	ansiFont: '',
+	ansiFontSize: 0,
+
+	// Burp Highlight
+	burpEnabled: true,
+	burpLightBg: '#FFFFFF',
+	burpDarkBg: '#2B2B2B',
+	burpFont: 'var(--font-monospace)',
+	burpFontSize: 14,
 };
 
 // 高亮前缀定义
